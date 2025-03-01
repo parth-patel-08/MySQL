@@ -1,6 +1,6 @@
-# MySQL Documentation
+# MySQL
 
-## Data Definition Operations (Create/Update Database/Table)
+## Data Definition Operations (Create/Modify Database/Table)
 
 ### Create Database
 
@@ -250,3 +250,234 @@ Note:
 
 - STORED: Generated value is stored in the table (while inserting values)
 - VIRTUAL: Generated value is calculated when queried (while fetching values) (**Default**)
+
+## Data Manipulation (CRUD)
+
+### Create (Insert Data)
+
+```sql
+-- Insert a single row with column names specified
+INSERT INTO employees (first_name, last_name, email, salary)
+VALUES ('John', 'Doe', 'john.doe@example.com', 60000);
+
+-- Insert a single row without specifying column names (must match table structure order)
+INSERT INTO employees 
+VALUES (NULL, 'Jane', 'Smith', 'jane.smith@example.com', 65000);
+
+-- Insert multiple rows in a single command
+INSERT INTO employees (first_name, last_name, email, salary)
+VALUES 
+    ('Alice', 'Johnson', 'alice.j@example.com', 55000),
+    ('Bob', 'Williams', 'bob.w@example.com', 70000),
+    ('Carol', 'Davis', 'carol.d@example.com', 62000);
+
+-- Insert data from another table (using SELECT)
+INSERT INTO employee_archive (first_name, last_name, email, salary)
+SELECT first_name, last_name, email, salary FROM employees WHERE termination_date IS NOT NULL;
+```
+
+### Read (Select Data)
+
+```sql
+-- Fetch all columns and all rows
+SELECT * FROM employees;
+
+-- Fetch specific columns
+SELECT first_name, last_name, salary FROM employees;
+
+-- Fetch with calculated fields
+SELECT first_name, last_name, salary, salary * 0.1 AS bonus FROM employees;
+
+-- Fetch with WHERE conditions
+SELECT * FROM employees 
+WHERE department = 'Engineering' AND (salary > 70000 OR experience_years > 5);
+```
+
+### Update
+
+```sql
+-- Update a single record
+UPDATE employees SET salary = 65000 WHERE employee_id = 101;
+
+-- Update multiple fields
+UPDATE employees SET  salary = 75000, last_updated = CURRENT_TIMESTAMP WHERE employee_id = 102;
+
+-- Update multiple records
+UPDATE employees SET salary = salary * 1.1 WHERE department = 'Sales' AND performance_rating > 8;
+```
+
+### Delete
+
+```sql
+-- Delete a single record
+DELETE FROM employees WHERE employee_id = 103;
+
+-- Delete multiple records with single command
+DELETE FROM employees WHERE department = 'Marketing' AND hire_date < '2020-01-01';
+
+-- Delete all records from a table
+DELETE FROM temp_log_entries;
+-- OR (faster for large tables, resets AUTO_INCREMENT)
+TRUNCATE TABLE temp_log_entries;
+```
+
+### Sorting/Ordering results (ORDER BY)
+```sql
+-- sort selected data in ascending order
+SELECT * FROM <table>
+    ORDER BY <column_name>;
+```
+
+```sql
+-- sort selected data in descending order
+SELECT * FROM <table>
+    ORDER BY <column_name> DESC;
+```
+
+### LIMIT:
+```sql
+-- Select first x number of rows
+SELECT * FROM <table>
+    LIMIT <x>;
+```
+
+### OFFSET:
+```sql
+-- Select x number of rows after y number of rows (Used in pagination)
+SELECT * FROM <table>
+    LIMIT <x>
+    OFFSET <y>;
+```
+
+### DISTINCT:
+```sql
+-- remove duplicate field values from result set
+SELECT DISTINCT <field> FROM <table>;
+```
+
+### Subqueries and Views
+```sql
+SELECT customer_name, product_name FROM 
+    (SELECT * FROM sales WHERE volume > 1000) AS base_result;
+
+-- We can write above using View
+
+CREATE VIEW base_result AS SELECT * FROM sales WHERE volume > 1000;
+SELECT customer_name, product_name FROM base_result;
+```
+
+### Filtering using WHERE
+Note: operators in where: =, !=, >, >=, <, <=, AND, OR, BETWEEN, IS, IS NOT.
+(IS & IS NOT is used for NULL, TRUE, ...etc EX: IS NULL)
+
+#### 1) Create Sales Table
+
+```sql
+CREATE TABLE sales (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    date_created DATE DEFAULT (CURRENT_DATE),
+    date_fulfilled DATE,
+    customer_name VARCHAR(300) NOT NULL,
+    product_name VARCHAR(300) NOT NULL,
+    volume NUMERIC(10,3) NOT NULL CHECK (volume >= 0),
+    is_recurring BOOLEAN DEFAULT FALSE,
+    is_disputed BOOLEAN DEFAULT FALSE
+);
+```
+
+#### 2) Insert Sample Data
+
+```sql
+INSERT INTO sales (date_created, date_fulfilled, customer_name, product_name, volume, is_recurring, is_disputed) VALUES
+-- Regular sales with various volumes
+('2023-01-05', '2023-01-08', 'Acme Corp', 'Premium Widget', 1500.000, FALSE, FALSE),
+('2023-01-10', '2023-01-12', 'TechStart Inc', 'Basic Package', 800.500, FALSE, FALSE),
+('2023-01-15', '2023-01-23', 'Global Solutions', 'Enterprise Software', 12000.000, TRUE, FALSE),
+('2023-01-20', '2023-01-22', 'Smith Consulting', 'Professional Services', 3500.000, FALSE, FALSE),
+('2023-01-25', '2023-01-26', 'Johnson LLC', 'Basic Widget', 500.000, FALSE, FALSE),
+-- Recurring sales
+('2023-02-01', '2023-02-05', 'Acme Corp', 'Support Package', 750.000, TRUE, FALSE),
+('2023-02-05', '2023-02-08', 'TechStart Inc', 'Cloud Services', 2500.000, TRUE, FALSE),
+('2023-02-10', '2023-02-15', 'Global Solutions', 'Maintenance Contract', 8000.000, TRUE, FALSE),
+-- Disputed sales
+('2023-02-15', '2023-02-20', 'Acme Corp', 'Custom Development', 6500.000, FALSE, TRUE),
+('2023-02-18', '2023-02-25', 'Johnson LLC', 'Premium Package', 4500.000, FALSE, TRUE),
+('2023-02-20', NULL, 'TechStart Inc', 'Hardware Bundle', 9500.000, FALSE, TRUE),
+-- Sales with various fulfillment times
+('2023-03-01', '2023-03-02', 'Smith Consulting', 'Rush Project', 2800.000, FALSE, FALSE),
+('2023-03-05', '2023-03-15', 'Global Solutions', 'Large Implementation', 15000.000, FALSE, FALSE),
+('2023-03-10', NULL, 'Johnson LLC', 'Pending Order', 1200.000, FALSE, FALSE),
+-- Recent sales
+('2023-03-15', '2023-03-18', 'Acme Corp', 'Standard Package', 950.000, FALSE, FALSE),
+('2023-03-20', '2023-03-21', 'Smith Consulting', 'Consultation', 450.000, FALSE, FALSE),
+('2023-03-25', '2023-03-28', 'Global Solutions', 'Software License', 5500.000, TRUE, FALSE),
+('2023-03-28', '2023-03-30', 'TechStart Inc', 'Starter Kit', 350.000, FALSE, FALSE),
+('2023-04-01', '2023-04-05', 'Johnson LLC', 'Premium Support', 1800.000, TRUE, FALSE),
+('2023-04-05', NULL, 'New Customer Ltd', 'Trial Package', 250.000, FALSE, FALSE);
+```
+
+#### 3) Find All Sales with Volume > 1000
+
+```sql
+SELECT * FROM sales WHERE volume > 1000;
+```
+
+#### 4) Find All Recurring Sales
+
+```sql
+SELECT * FROM sales WHERE is_recurring = TRUE;
+--OR
+SELECT * FROM sales WHERE is_recurring IS TRUE;
+```
+
+#### 5) Find Disputed Sales with Volume > 5000
+
+```sql
+SELECT * FROM sales WHERE (is_disputed IS TRUE) AND (volume > 5000);
+```
+
+#### 6) Find All Sales Created Between Two Dates
+
+```sql
+SELECT * FROM sales WHERE date_created >= '2023-02-01' AND date_created <= '2023-02-28';
+-- OR we can use BETWEEN (Note: both dates are inclusive)
+SELECT * FROM sales WHERE date_created BETWEEN '2023-02-01' AND '2023-02-28';
+```
+
+#### 7) Find All Sales Fulfilled <= 5 Days After Creation Date
+
+```sql
+SELECT *, DATEDIFF(date_fulfilled, date_created) AS days_to_fulfill FROM sales
+WHERE date_fulfilled IS NOT NULL AND DATEDIFF(date_fulfilled, date_created) <= 5;
+```
+
+#### 8) Find Top 10 Sales
+
+```sql
+SELECT * FROM sales
+    ORDER BY volume DESC
+    LIMIT 10;
+```
+
+#### 9) Find Bottom 10 Sales
+
+```sql
+-- ASC is optional
+SELECT * FROM sales
+    ORDER BY volume ASC
+    LIMIT 10;
+```
+
+#### 10) Find top 11th to 25th Sales
+```sql
+SELECT * FROM sales
+    ORDER BY volume DESC
+    LIMIT 15
+    OFFSET 10;
+```
+
+#### 11) Get a List of Distinct Customers
+
+```sql
+SELECT DISTINCT customer_name FROM sales;
+```
