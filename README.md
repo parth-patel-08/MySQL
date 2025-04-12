@@ -481,3 +481,252 @@ SELECT * FROM sales
 ```sql
 SELECT DISTINCT customer_name FROM sales;
 ```
+
+### Normalization
+
+- Data normalization is the process of organizing data in a database to minimize **redundancy** and **dependency**. The goal of normalization is to ensure that the data is stored in the most efficient way while maintaining data integrity.
+- Key concepts:
+    - **Redundancy:** Repetition of data, which can lead to inconsistencies and inefficiencies.
+    - **Dependency:** The relationship between data fields in a database. If some pieces of data depend on others, they should be stored in a way that reflects that relationship.
+    - **Normalization Levels:** There are several "normal forms" (1NF, 2NF, 3NF, etc.), each with stricter rules to reduce redundancy and dependencies.
+
+| Normal Form | Rules/Criteria | Purpose |
+| ----------- | -------------- | ------- |
+| **1st Normal Form (1NF)** | 	1. **Atomicity**: Each column must contain atomic (indivisible) values. This means no lists or sets in a column. <br /> 2. **Uniqueness**: Each row must be unique. | Eliminate repeating groups and ensure the table has atomic values (no multi-valued columns). |
+| **2nd Normal Form (2NF)** | 	1. **Be in 1NF**. <br /> 2. **Remove Partial Dependency**: No non-key column should depend on only part of a composite primary key (i.e., if the primary key consists of more than one column, all non-key attributes must depend on the whole key, not just part of it). | Eliminate redundancy caused by partial dependency in composite keys. |
+| **3rd Normal Form (3NF)** | 1. **Be in 2NF**. <br /> 2. **Remove Transitive Dependency**: Non-key columns should not depend on other non-key columns. All non-key columns should depend only on the primary key. | Remove transitive dependencies between non-key attributes. |
+| **Boyce-Codd Normal Form (BCNF)** | 1. **Be in 3NF**. <br /> 2. Every **determinant** (attribute that determines another attribute) must be a **candidate key**. In other words, if a non-prime attribute (non-key attribute) determines another attribute, the determinant must be a candidate key. | Resolve issues not handled by 3NF, especially with respect to candidate keys. |
+| **4th Normal Form (4NF)** | 1. **Be in BCNF**. <br /> 2. **Remove Multivalued Dependency**: If a table has two or more independent and multivalued facts about an entity, separate them into different tables. | Eliminate multivalued dependencies. |
+| **5th Normal Form (5NF)** | 1. **Be in 4NF**. <br /> 2. **Remove Join Dependency**: A table should not contain any join dependency, i.e., it should be decomposable into smaller tables without loss of data. | Eliminate redundancy caused by join dependencies. |
+| **Domain-Key Normal Form (DKNF)** | The table is free of all kinds of anomalies, and every constraint is a logical consequence of domain constraints (the set of valid values for a column) and key constraints (the relationships among primary and foreign keys). | Ensure the table is free from all anomalies (constraints apply directly). |
+
+### Foreign key constraints ( ON DELETE & ON UPDATE )
+
+| Constraint | Use Case |
+| :--: | :--: |
+| RESTRICT | Prevent the action (e.g. deleting a related row) |
+| NO ACTION | Prevent the action (e.g. deleting a related row)<br>*(Check can be different)* |
+| CASCADE | Perform the same action on the row with the foreign key |
+| SET NULL | Set foreign key value to NULL if the related row was deleted |
+| SET DEFAULT | Set foreign key value to DEFAULT value if the related row was deleted |
+
+### Connecting two tables (Primary key + Foreign key)
+
+<table>
+<tr><th>addresses</th><th>users</th></tr>
+
+<tr><td>
+
+| id |  street  | house_number |
+| -- |  ------- | -------------|
+| 1 | first street | 5 |
+| 2 | second street | 12 |
+| 3 | third street | 4 |
+
+</td><td>
+
+| id |  first_name  | address_id |
+| -- |  ------- | -------------|
+| 1 | John | 2 |
+| 2 | Michael | 1 |
+| 3 | Rakesh | 3 |
+
+</td></tr>
+</table>
+
+```sql
+CREATE TABLE addresses (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    street VARCHAR(100) NOT NULL,
+    house_number VARCHAR(50) NOT NULL
+);
+
+-- If we don't use "(id)" then it will take the primary key of the table as a reference key
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT
+    first_name VARCHAR(50) NOT NULL,
+    address_id INT REFERENCES addresses (id) ON DELETE CASCADE
+);
+-- Note: CASCADE => If I delete address having id 1, then it will delete user that has address_id 1
+```
+
+### Data Relationships (One to One, One to Many, Many to Many)
+
+**Example:** Database of Company which contains below tables.
+- **Employees:** id, first_name, last_name, email, team_id
+- **Teams:** id, name, building_id
+- **Projects:** id, title
+- **Internet Accounts:** id, email, password
+- **Buildings:** id, name
+
+**One to One (1:1):**
+- One record in Table A belongs to exactly one record in Table B.
+- EX:
+    - **employees - internet_accounts** (One employee has only one internet account)
+
+**One to Many (1:n):**
+- One record in Table A has one or many related records in Table B.
+- Ex:
+    - **employees - teams** (one team can have multiple employees)
+    - **teams - buildings** (one building can have multiple teams)
+
+**Many to Many (n:n):**
+- One record in Table A has one or many related records in Table B and vice versa.
+- It requires junction table to connect two tables.
+- Ex:
+    - **employees and projects** (There are multiple employees working on single project and one employee can also be working on multiple projects)
+
+```sql
+CREATE TABLE buildings (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE teams (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    building_id INT REFERENCES buildings (id) ON DELETE SET NULL
+);
+
+CREATE TABLE employees (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    team_id INT DEFAULT 1 REFERENCES teams (id) ON DELETE SET DEFAULT
+);
+
+CREATE TABLE internet_accounts (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    email VARCHAR(100) REFERENCES employees (email) ON DELETE CASCADE,
+    password VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE projects (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    title VARCHAR(100) NOT NULL
+);
+
+-- Intermediate table => n:n
+CREATE TABLE employees_projects (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    employee_id INT REFERENCES employees (id) ON DELETE CASCADE,
+    project_id INT REFERENCES projects (id) ON DELETE CASCADE
+);
+```
+
+### UNION
+
+- UNION is a clause that combines multiple result sets into one result set by appending rows.
+
+    ```sql
+    SELECT * FROM users WHERE id < 3
+    UNION
+    SELECT * FROM users WHERE id > 5;
+
+    -- If record is from another table then also it will combine the result sets
+    --EX:
+
+    SELECT id, first_name FROM users
+    UNION
+    SELECT id, street FROM addresses; -- It will add street name in first_name column
+    ```
+
+### Joining Data (Inner Join, Left Join, Cross Join)
+
+<table>
+<tr>
+    <th>addresses</th>
+    <th>users</th>
+    <th>cities</th>
+</tr>
+<tr><td>
+
+| id | street | house_number | city_id |
+| -- | ------ | ------------ | ------- |
+| 1 | Test street | 10A | 1 |
+| 2 | Some street | 5 | 2 |
+| 3 | My street | 18 | 3 |
+
+</td><td>
+
+| id | first_name | address_id |
+| -- | ---------- | ---------- |
+| 1 | Max | 1 |
+| 2 | Manuel | 3 |
+
+</td><td>
+
+| id | name |
+| -- | ---- |
+| 1 | my city |
+| 2 | test city |
+| 3 | dummy city |
+
+</td></tr>
+</table>
+
+- **INNER JOIN:** It will display the records that have matching values in both tables.
+
+    ```sql
+    -- Combined multiple inner joins (Output of first inner join will behave as a left table for second inner join)
+    SELECT u.first_name, a.street, a.house_number, c.name AS city_name
+    FROM users AS u
+    INNER JOIN addresses AS a ON u.address_id = a.id
+    INNER JOIN cities AS c ON a.city_id = c.id;
+    ```
+
+    **Output:**
+
+    | first_name | street | house_number | city_name |
+    | --------- | ------ | ------------- | --------- |
+    | Max | Test street | 10A | my city |
+    | Manuel | My street | 18 | dummy city |
+
+- **LEFT JOIN (or LEFT OUTER JOIN):** It will display all records from the first table, and the matched records from the second table.
+
+    ```sql
+    SELECT u.first_name, a.street, a.house_number, c.name AS city_name
+    FROM addresses AS a
+    LEFT JOIN users AS u ON a.id = u.address_id
+    INNER JOIN cities AS c ON a.city_id = c.id;
+    ```
+
+    **Output:**
+
+    | first_name | street | house_number | city_name |
+    | --------- | ------ | ------------- | --------- |
+    | Max | Test street | 10A | my city |
+    | NULL | Some street | 5 | test city |
+    | Manuel | My street | 18 | dummy city |
+
+- **CROSS JOIN:** It will combine every row from the first table with every row from the second table
+
+    ```sql
+    SELECT * FROM users
+    CROSS JOIN addresses;
+    ```
+
+- **FULL JOIN:** MySQL Does not support Full Join but we can achieve it using Union. (FULL JOIN = LEFT JOIN UNION RIGHT JOIN)
+    ```sql
+    SELECT u.first_name, a.street, a.house_number, c.name AS city_name
+    FROM addresses AS a
+    LEFT JOIN users AS u ON a.id = u.address_id
+    INNER JOIN cities AS c ON a.city_id = c.id;
+
+    UNION
+
+    SELECT u.first_name, a.street, a.house_number, c.name AS city_name
+    FROM addresses AS a
+    RIGHT JOIN users AS u ON a.id = u.address_id
+    INNER JOIN cities AS c ON a.city_id = c.id;
+    ```
+
+- **SELF JOIN:** Table is joined with itself. It is useful when you want to compare rows within the same table.
+    - We can achieve Self Join using Left Join the table with it self.
+
+    ```sql
+    SELECT e1.name AS employee_name, e2.name AS manager_name
+    FROM employees e1
+    LEFT JOIN employees e2 ON e1.manager_id = e2.employee_id;
+    ```
