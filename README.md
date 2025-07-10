@@ -164,8 +164,7 @@ CREATE TABLE table_name (
     phone_no INT NOT NULL,
     email VARCHAR(100) UNIQUE,
     percentage_value INT DEFAULT 100 CHECK (percentage_value > 0 AND percentage_value < 101),
-    department_id INT,
-    FOREIGN KEY (department_id) REFERENCES departments_table(id)
+    department_id INT REFERENCES departments_table(id)
 );
 
 -- Table level constraints
@@ -598,7 +597,7 @@ CREATE TABLE employees (
 
 CREATE TABLE internet_accounts (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    email VARCHAR(100) REFERENCES employees (email) ON DELETE CASCADE,
+    email VARCHAR(100) UNIQUE REFERENCES employees (email) ON DELETE CASCADE,
     password VARCHAR(100) NOT NULL
 );
 
@@ -608,12 +607,80 @@ CREATE TABLE projects (
 );
 
 -- Intermediate table => n:n
+
+-- Wrong way XXXXXXXXXXXXXXXXXXX
 CREATE TABLE employees_projects (
     id INT PRIMARY KEY AUTO_INCREMENT,
     employee_id INT REFERENCES employees (id) ON DELETE CASCADE,
     project_id INT REFERENCES projects (id) ON DELETE CASCADE
 );
+
+-- In above relation there may be duplicate entries in employees_projects table
+-- Ex:
+-- id | employee_id | project_id
+-- 1  |      25     |     1
+-- 2  |      25     |     1
+
+CREATE TABLE employees_projects (
+    employee_id INT REFERENCES employees (id) ON DELETE CASCADE,
+    project_id INT REFERENCES projects (id) ON DELETE CASCADE,
+    PRIMARY KEY (employee_id, project_id) -- composite primary keys
+);
 ```
+
+### Composite Primary Key
+ - A combination of multiple columns can serve as a primary key, this is called composite primary key.
+ - In above example, primary key of `employees_projects` is composite primary key.
+
+ ### Composite Foreign Key
+ - Composite foreign key is used to connect table with another table which has composite primary key.
+ ```sql
+FOREIGN KEY (beginningTime, day, tutorId) REFERENCES tutorial(beginningTime, day, tutorId);
+ ```
+
+ ### Self Referential Relationships
+**One to Many (1:n)**
+ - One manager can have multiple employees in his team.
+
+    ```sql
+    CREATE TABLE employees (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(50) NOT NULL,
+        manager_id INT,
+        FOREIGN KEY (manager_id) REFERENCES employees ON DELETE SET NULL
+    );
+    ```
+
+**One to One (1:1)**
+ - An employee can have only one mentor, and each mentor can mentor only one employee.
+
+    ```sql
+    CREATE TABLE employees (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(50) NOT NULL,
+        mentor_id INT UNIQUE,
+        FOREIGN KEY (mentor_id) REFERENCES employees ON DELETE SET NULL
+    );
+    ```
+
+**Many to Many (n:n)**
+ - user can have multiple friends and each friend can also have multiple friends.
+
+    ```sql
+    CREATE TABLE users (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(50) NOT NULL
+    );
+
+    CREATE TABLE user_friends (
+        user_id INT,
+        friend_id INT,
+        CHECK (user_id < friend_id), -- to avoid duplication like 25-30 and 30-25, because both have same meaning that 25 and 30 are friends
+        PRIMARY KEY (user_id, friend_id),
+        FOREIGN KEY (user_id) REFERENCES users ON DELETE CASCADE,
+        FOREIGN KEY (friend_id) REFERENCES users ON DELETE CASCADE
+    );
+    ```
 
 ### UNION
 
@@ -707,6 +774,15 @@ CREATE TABLE employees_projects (
     CROSS JOIN addresses;
     ```
 
+- **SELF JOIN:** Table is joined with itself. It is useful when you want to compare rows within the same table.
+    - We can achieve Self Join using Left Join the table with it self.
+
+    ```sql
+    SELECT e1.name AS employee_name, e2.name AS manager_name
+    FROM employees e1
+    LEFT JOIN employees e2 ON e1.manager_id = e2.employee_id;
+    ```
+
 - **FULL JOIN:** MySQL Does not support Full Join but we can achieve it using Union. (FULL JOIN = LEFT JOIN UNION RIGHT JOIN)
     ```sql
     SELECT u.first_name, a.street, a.house_number, c.name AS city_name
@@ -720,13 +796,4 @@ CREATE TABLE employees_projects (
     FROM addresses AS a
     RIGHT JOIN users AS u ON a.id = u.address_id
     INNER JOIN cities AS c ON a.city_id = c.id;
-    ```
-
-- **SELF JOIN:** Table is joined with itself. It is useful when you want to compare rows within the same table.
-    - We can achieve Self Join using Left Join the table with it self.
-
-    ```sql
-    SELECT e1.name AS employee_name, e2.name AS manager_name
-    FROM employees e1
-    LEFT JOIN employees e2 ON e1.manager_id = e2.employee_id;
     ```
