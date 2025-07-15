@@ -797,3 +797,182 @@ FOREIGN KEY (beginningTime, day, tutorId) REFERENCES tutorial(beginningTime, day
     RIGHT JOIN users AS u ON a.id = u.address_id
     INNER JOIN cities AS c ON a.city_id = c.id;
     ```
+
+### Aggregate Functions (COUNT, MIN, MAX, SUM, AVG)
+- Aggregate functions are functions that perform mathematical operation and return a single (aggregated) result.
+
+- **Count:** The COUNT() function returns the number of records returned by a select query.
+    ```sql
+    SELECT COUNT(product_id) AS number_of_products FROM products;
+    SELECT COUNT(DISTINCT booking_date) FROM bookings;
+    ```
+
+- **Min:** The MIN() function returns the minimum value in a set of values.
+    ```sql
+    SELECT MIN(price) AS smallest_price FROM products;
+    ```
+
+- **Max:** The MAX() function returns the maximum value in a set of values.
+    ```sql
+    SELECT MAX(price) AS largest_price FROM products;
+    ```
+
+- **Sum:** The SUM() function calculates the sum of a set of values.
+    ```sql
+    SELECT SUM(quantity) AS total_items_ordered FROM order_details;
+    ```
+
+- **Avg:** The AVG() function returns the average value of an expression.
+    ```sql
+    SELECT AVG(price) AS average_price FROM products;
+    ```
+
+- **Round:** The ROUND() function rounds a number to a specified number of decimal places.
+    - **Syntax:** ROUND(number, decimals)
+    ```sql
+    SELECT ROUND(AVG(num_guests), 2) FROM bookings;
+
+    SELECT ROUND(135.375, 2);
+    -- Output: 135.38
+    ```
+
+### Group By
+- The `GROUP BY` statement groups rows that have the same values into summary rows, like "find the number of customers in each country".
+- The `GROUP BY` statement is often used with aggregate functions (`COUNT()`, `MIN()`, `MAX()`, `SUM()`, `AVG()`) to group the result-set by one or more columns.
+- **Syntax:**
+    ```sql
+    SELECT column_name(s)
+    FROM table_name
+    WHERE condition
+    GROUP BY column_name(s)
+    ORDER BY column_name(s);
+    ```
+
+    ```sql
+    -- EX: lists the number of customers in each country
+    SELECT COUNT(customer_id), country
+    FROM customers
+    GROUP BY country;
+    ```
+- Group by multiple columns is say, for example, **GROUP BY column1, column2**. This means placing all the rows with the same values of columns **column 1** and **column 2** in one group.
+    ```sql
+    -- this count will return the count of records in that group
+    SELECT subject, year, Count(*)
+    FROM students
+    GROUP BY subject, year;
+    ```
+
+### HAVING clause (filter grouped data)
+- We know that `WHERE` clause is used to place conditions on columns but what if we want to place conditions on groups? This is where the `HAVING` clause comes into use. We can use the `HAVING` clause to filter results based on the conditions applied to grouped data, such as sums, averages or counts.
+- we cannot use aggregate functions like `SUM()`, `COUNT()`, `AVG()`, etc., directly in the `WHERE` clause. Instead, we use the `HAVING` clause when we need to filter data based on the result of these aggregate functions.
+- **Syntax:**
+    ```sql
+    SELECT column1, function_name(column2)
+    FROM table_name
+    WHERE condition
+    GROUP BY column1, column2
+    HAVING condition
+    ORDER BY column1, column2;
+    ```
+    ```sql
+    -- Filter groups whose total salary of all employees exceeds 50000.
+    SELECT NAME, SUM(sal) FROM employees
+    GROUP BY name
+    HAVING SUM(sal)>50000; 
+    ```
+
+### Nested Subqueries
+```sql
+-- EX: 1
+SELECT MIN(daily_sum)
+FROM (
+    SELECT booking_date, SUM(amount_billed) AS daily_sum
+    FROM bookings
+    GROUP BY booking_date
+) AS daily_table;
+
+--Ex: 2
+SELECT * 
+FROM employees
+WHERE department=(SELECT department FROM departments WHERE dept_id=1);
+
+-- Ex: 3
+SELECT * 
+FROM employees 
+WHERE salary < (SELECT avg(salary) from employees)
+```
+
+### Window Function
+- Using window functions, we can use aggregate functions without reducing rows like grouping. (In `GROUP BY`, it reduces the rows of same group into the single row).
+- We can add result of aggregation into new column.
+- **Syntax:**
+    ```sql
+    SELECT column_name1, 
+    window_function(column_name2)
+    OVER([PARTITION BY column_name1] [ORDER BY column_name3]) AS new_column
+    FROM table_name;
+    ```
+1. Aggregate Window Functions:
+    - Aggregate window functions calculate aggregates over a window of rows while retaining individual rows.
+    - Aggregate functions: `COUNT()`, `MIN()`, `MAX()`, `SUM()`, `AVG()`
+    - EX:
+        ```sql
+        SELECT name, age, department, salary,
+        AVG(salary) OVER(PARTITION BY department) AS avg_salary
+        FROM employees;
+        -- Output: (records with same department belongs to single window)
+        -- it will add column named avg_salary in which the average value of its window is stored in that column
+        ```
+
+2.  Ranking Window Functions:
+    - These functions provide rankings of rows within a partition based on specific criteria.
+    - Ranking Functions:
+        - `RANK()`: Assigns ranks to rows, skipping ranks for duplicates.
+            - EX:
+                ```sql
+                SELECT name, department, salary,
+                    RANK() OVER(PARTITION BY department ORDER BY salary DESC) AS emp_rank
+                FROM employees;
+                -- output
+                -- name     | department    | salary | emp_rank
+                -- -------------------------------------
+                -- Ramesh   | Finance       | 50,000 | 1
+                -- Suresh   | Finance       | 50,000 | 1
+                -- Ram      | Finance       | 20,000 | 3
+                -- Deep     | Sales         | 30,000 | 1
+                -- Pradeep  | Sales         | 20,000 | 2
+
+                -- Note:  For Ram, rank is 3 because rank for Suresh has been skipped (i.e. rank 2 is skipped). And rank from Deep will start from 1 because new window is stated (window for sales is started).
+                ```
+        - `DENSE_RANK()`: Assigns ranks to rows without skipping rank numbers for duplicates.
+            - EX:
+            ```sql
+            SELECT name, department, salary,
+                DENSE_RANK() OVER(PARTITION BY department ORDER BY salary DESC) AS emp_dense_rank
+            FROM employees;
+            -- output
+            -- name     | department    | salary | emp_dense_rank
+            -- -------------------------------------
+            -- Ramesh   | Finance       | 50,000 | 1
+            -- Suresh   | Finance       | 50,000 | 1
+            -- Ram      | Finance       | 20,000 | 2
+            -- Deep     | Sales         | 30,000 | 1
+            -- Pradeep  | Sales         | 20,000 | 2
+
+            -- Note: For Ram, rank is 2 because rank for suresh is not skipped.
+            ```
+        - `ROW_NUMBER()`: Assigns a unique number to each row in the result set.
+            - EX:
+            ```sql
+            SELECT name, department, salary,
+                ROW_NUMBER() OVER(PARTITION BY department ORDER BY salary DESC) AS emp_row_no
+            FROM employees;
+            -- output
+            -- name     | department    | salary | emp_row_no
+            -- -------------------------------------
+            -- Ramesh   | Finance       | 50,000 | 1
+            -- Suresh   | Finance       | 50,000 | 2
+            -- Ram      | Finance       | 20,000 | 3
+            -- Deep     | Sales         | 30,000 | 1
+            -- Pradeep  | Sales         | 20,000 | 2
+            ```
