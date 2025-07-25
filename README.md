@@ -365,140 +365,6 @@ CREATE VIEW base_result AS SELECT * FROM sales WHERE volume > 1000;
 SELECT customer_name, product_name FROM base_result;
 ```
 
-### Filtering using WHERE
-Note: operators in where: =, !=, >, >=, <, <=, AND, OR, BETWEEN, IS, IS NOT.
-(IS & IS NOT is used for NULL, TRUE, ...etc EX: IS NULL)
-
-#### 1) Create Sales Table
-
-```sql
-CREATE TABLE sales (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    date_created DATE DEFAULT (CURRENT_DATE),
-    date_fulfilled DATE,
-    customer_name VARCHAR(300) NOT NULL,
-    product_name VARCHAR(300) NOT NULL,
-    volume NUMERIC(10,3) NOT NULL CHECK (volume >= 0),
-    is_recurring BOOLEAN DEFAULT FALSE,
-    is_disputed BOOLEAN DEFAULT FALSE
-);
-```
-
-#### 2) Insert Sample Data
-
-```sql
-INSERT INTO sales (date_created, date_fulfilled, customer_name, product_name, volume, is_recurring, is_disputed) VALUES
--- Regular sales with various volumes
-('2023-01-05', '2023-01-08', 'Acme Corp', 'Premium Widget', 1500.000, FALSE, FALSE),
-('2023-01-10', '2023-01-12', 'TechStart Inc', 'Basic Package', 800.500, FALSE, FALSE),
-('2023-01-15', '2023-01-23', 'Global Solutions', 'Enterprise Software', 12000.000, TRUE, FALSE),
-('2023-01-20', '2023-01-22', 'Smith Consulting', 'Professional Services', 3500.000, FALSE, FALSE),
-('2023-01-25', '2023-01-26', 'Johnson LLC', 'Basic Widget', 500.000, FALSE, FALSE),
--- Recurring sales
-('2023-02-01', '2023-02-05', 'Acme Corp', 'Support Package', 750.000, TRUE, FALSE),
-('2023-02-05', '2023-02-08', 'TechStart Inc', 'Cloud Services', 2500.000, TRUE, FALSE),
-('2023-02-10', '2023-02-15', 'Global Solutions', 'Maintenance Contract', 8000.000, TRUE, FALSE),
--- Disputed sales
-('2023-02-15', '2023-02-20', 'Acme Corp', 'Custom Development', 6500.000, FALSE, TRUE),
-('2023-02-18', '2023-02-25', 'Johnson LLC', 'Premium Package', 4500.000, FALSE, TRUE),
-('2023-02-20', NULL, 'TechStart Inc', 'Hardware Bundle', 9500.000, FALSE, TRUE),
--- Sales with various fulfillment times
-('2023-03-01', '2023-03-02', 'Smith Consulting', 'Rush Project', 2800.000, FALSE, FALSE),
-('2023-03-05', '2023-03-15', 'Global Solutions', 'Large Implementation', 15000.000, FALSE, FALSE),
-('2023-03-10', NULL, 'Johnson LLC', 'Pending Order', 1200.000, FALSE, FALSE),
--- Recent sales
-('2023-03-15', '2023-03-18', 'Acme Corp', 'Standard Package', 950.000, FALSE, FALSE),
-('2023-03-20', '2023-03-21', 'Smith Consulting', 'Consultation', 450.000, FALSE, FALSE),
-('2023-03-25', '2023-03-28', 'Global Solutions', 'Software License', 5500.000, TRUE, FALSE),
-('2023-03-28', '2023-03-30', 'TechStart Inc', 'Starter Kit', 350.000, FALSE, FALSE),
-('2023-04-01', '2023-04-05', 'Johnson LLC', 'Premium Support', 1800.000, TRUE, FALSE),
-('2023-04-05', NULL, 'New Customer Ltd', 'Trial Package', 250.000, FALSE, FALSE);
-```
-
-#### 3) Find All Sales with Volume > 1000
-
-```sql
-SELECT * FROM sales WHERE volume > 1000;
-```
-
-#### 4) Find All Recurring Sales
-
-```sql
-SELECT * FROM sales WHERE is_recurring = TRUE;
---OR
-SELECT * FROM sales WHERE is_recurring IS TRUE;
-```
-
-#### 5) Find Disputed Sales with Volume > 5000
-
-```sql
-SELECT * FROM sales WHERE (is_disputed IS TRUE) AND (volume > 5000);
-```
-
-#### 6) Find All Sales Created Between Two Dates
-
-```sql
-SELECT * FROM sales WHERE date_created >= '2023-02-01' AND date_created <= '2023-02-28';
--- OR we can use BETWEEN (Note: both dates are inclusive)
-SELECT * FROM sales WHERE date_created BETWEEN '2023-02-01' AND '2023-02-28';
-```
-
-#### 7) Find All Sales Fulfilled <= 5 Days After Creation Date
-
-```sql
-SELECT *, DATEDIFF(date_fulfilled, date_created) AS days_to_fulfill FROM sales
-WHERE date_fulfilled IS NOT NULL AND DATEDIFF(date_fulfilled, date_created) <= 5;
-```
-
-#### 8) Find Top 10 Sales
-
-```sql
-SELECT * FROM sales
-    ORDER BY volume DESC
-    LIMIT 10;
-```
-
-#### 9) Find Bottom 10 Sales
-
-```sql
--- ASC is optional
-SELECT * FROM sales
-    ORDER BY volume ASC
-    LIMIT 10;
-```
-
-#### 10) Find top 11th to 25th Sales
-```sql
-SELECT * FROM sales
-    ORDER BY volume DESC
-    LIMIT 15
-    OFFSET 10;
-```
-
-#### 11) Get a List of Distinct Customers
-
-```sql
-SELECT DISTINCT customer_name FROM sales;
-```
-
-### Normalization
-
-- Data normalization is the process of organizing data in a database to minimize **redundancy** and **dependency**. The goal of normalization is to ensure that the data is stored in the most efficient way while maintaining data integrity.
-- Key concepts:
-    - **Redundancy:** Repetition of data, which can lead to inconsistencies and inefficiencies.
-    - **Dependency:** The relationship between data fields in a database. If some pieces of data depend on others, they should be stored in a way that reflects that relationship.
-    - **Normalization Levels:** There are several "normal forms" (1NF, 2NF, 3NF, etc.), each with stricter rules to reduce redundancy and dependencies.
-
-| Normal Form | Rules/Criteria | Purpose |
-| ----------- | -------------- | ------- |
-| **1st Normal Form (1NF)** | 	1. **Atomicity**: Each column must contain atomic (indivisible) values. This means no lists or sets in a column. <br /> 2. **Uniqueness**: Each row must be unique. | Eliminate repeating groups and ensure the table has atomic values (no multi-valued columns). |
-| **2nd Normal Form (2NF)** | 	1. **Be in 1NF**. <br /> 2. **Remove Partial Dependency**: No non-key column should depend on only part of a composite primary key (i.e., if the primary key consists of more than one column, all non-key attributes must depend on the whole key, not just part of it). | Eliminate redundancy caused by partial dependency in composite keys. |
-| **3rd Normal Form (3NF)** | 1. **Be in 2NF**. <br /> 2. **Remove Transitive Dependency**: Non-key columns should not depend on other non-key columns. All non-key columns should depend only on the primary key. | Remove transitive dependencies between non-key attributes. |
-| **Boyce-Codd Normal Form (BCNF)** | 1. **Be in 3NF**. <br /> 2. Every **determinant** (attribute that determines another attribute) must be a **candidate key**. In other words, if a non-prime attribute (non-key attribute) determines another attribute, the determinant must be a candidate key. | Resolve issues not handled by 3NF, especially with respect to candidate keys. |
-| **4th Normal Form (4NF)** | 1. **Be in BCNF**. <br /> 2. **Remove Multivalued Dependency**: If a table has two or more independent and multivalued facts about an entity, separate them into different tables. | Eliminate multivalued dependencies. |
-| **5th Normal Form (5NF)** | 1. **Be in 4NF**. <br /> 2. **Remove Join Dependency**: A table should not contain any join dependency, i.e., it should be decomposable into smaller tables without loss of data. | Eliminate redundancy caused by join dependencies. |
-| **Domain-Key Normal Form (DKNF)** | The table is free of all kinds of anomalies, and every constraint is a logical consequence of domain constraints (the set of valid values for a column) and key constraints (the relationships among primary and foreign keys). | Ensure the table is free from all anomalies (constraints apply directly). |
-
 ### Foreign key constraints ( ON DELETE & ON UPDATE )
 
 | Constraint | Use Case |
@@ -542,7 +408,7 @@ CREATE TABLE addresses (
 
 -- If we don't use "(id)" then it will take the primary key of the table as a reference key
 CREATE TABLE users (
-    id INT PRIMARY KEY AUTO_INCREMENT
+    id INT PRIMARY KEY AUTO_INCREMENT,
     first_name VARCHAR(50) NOT NULL,
     address_id INT REFERENCES addresses (id) ON DELETE CASCADE
 );
@@ -976,3 +842,258 @@ WHERE salary < (SELECT avg(salary) from employees)
             -- Deep     | Sales         | 30,000 | 1
             -- Pradeep  | Sales         | 20,000 | 2
             ```
+
+### [MYSQL Functions](https://www.w3schools.com/mysql/mysql_ref_functions.asp)
+**memberships table for examples:**
+```sql
+CREATE TABLE memberships (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    membership_start DATE,
+    membership_end DATE,
+    last_checkin TIMESTAMP,
+    last_checkout TIMESTAMP,
+    consumption NUMERIC(5, 2),
+    first_name VARCHAR(200),
+    last_name VARCHAR(200),
+    price NUMERIC(5, 2),
+    billing_frequency INT,
+    gender VARCHAR(200)
+);
+```
+
+- Arithmetic multiplication
+    ```sql
+    SELECT price * billing_frequency AS annual_revenue
+    FROM memberships;
+
+    SELECT SUM(price * billing_frequency) AS total_annual_revenue
+    FROM memberships;
+    ```
+- Mathematical Functions
+    - [CEIL](https://www.w3schools.com/mysql/func_mysql_ceil.asp) Returns the smallest integer value that is >= to a number
+        ```sql
+        SELECT CEIL(consumption), consumption
+        FROM memberships;
+
+        -- Output:
+        -- CEIL(consumption)    |   consumption
+        -- ------------------------------------
+        -- 27                   |   26.49
+        -- 101                  |   100.26
+        -- 6                    |   5.82
+        ```
+    - [FLOOR](https://www.w3schools.com/mysql/func_mysql_floor.asp) Returns the largest integer value that is <= to a number
+        ```sql
+        SELECT FLOOR(consumption), consumption
+        FROM memberships;
+
+        -- Output:
+        -- FLOOR(consumption)    |   consumption
+        -- ------------------------------------
+        -- 26                   |   26.49
+        -- 100                  |   100.26
+        -- 5                    |   5.82
+        ```
+    - [ROUND](https://www.w3schools.com/mysql/func_mysql_round.asp) Rounds a number to a specified number of decimal places
+        ```sql
+        SELECT ROUND(consumption, 2) AS val_1, ROUND(consumption, 1) AS val_2, ROUND(consumption, 0) AS val_3, consumption
+        FROM memberships;
+
+        -- Output:
+        -- val_1  | val_2  | val_3 | consumption
+        -- ------------------------------------
+        -- 26.49  | 26.5  | 26  | 26.49
+        -- 100.26 | 100.3 | 100 | 100.26
+        -- 5.82   | 5.8   | 6   | 5.82
+        ```
+    - [TRUNCATE](https://www.w3schools.com/mysql/func_mysql_truncate.asp) Truncates a number to the specified number of decimal places
+        ```sql
+        SELECT TRUNCATE(consumption, 2) AS val_1, TRUNCATE(consumption, 1) AS val_2, TRUNCATE(consumption, 0) AS val_3, consumption
+        FROM memberships;
+
+        -- Output:
+        -- val_1  | val_2  | val_3 | consumption
+        -- ------------------------------------
+        -- 26.49  | 26.4  | 26  | 26.49
+        -- 100.26 | 100.2 | 100 | 100.26
+        -- 5.82   | 5.8   | 5   | 5.82
+        ```
+
+- String Functions
+    - [CONCAT](https://www.w3schools.com/mysql/func_mysql_concat.asp) Adds two or more expressions together
+        ```sql
+        -- 1. Concat two strings
+        SELECT CONCAT(first_name, ' ', last_name) AS full_name, first_name, last_name
+        FROM memberships;
+        -- O/P: Parth Patel (where first_name = Parth & last_name = Patel)
+
+        -- 2. Concat string with number
+        SELECT CONCAT("$ ", price)
+        FROM memberships;
+        -- O/P: $ 5 (where price = 5)
+        ```
+    - [LOWER](https://www.w3schools.com/mysql/func_mysql_lower.asp) Converts a string to lower-case
+        ```sql
+        -- 1. LOWER function with insert query
+        INSERT INTO memberships (
+            membership_start,
+            membership_end,
+            last_checkin,
+            last_checkout,
+            consumption,
+            first_name,
+            last_name,
+            price,
+            billing_frequency,
+            gender
+        )
+        VALUES (
+            '2025-07-23',
+            '2025-08-23',
+            '2025-07-23 08:56:01',
+            '2025-07-23 09:20:12',
+            NULL,
+            'John',
+            'Doe',
+            19.99,
+            12,
+            LOWER('DivErs')
+        );
+        -- O/P: DivErs will convert into divers
+        ```
+    - [LENGTH](https://www.w3schools.com/mysql/func_mysql_length.asp) Returns the length of a string (in bytes)
+        ```sql
+        SELECT * FROM memberships
+        WHERE LENGTH(last_name) < 4;
+        -- if str = "John" then LENGTH(str) = 4
+        ```
+    
+    - [TRIM](https://www.w3schools.com/mysql/func_mysql_trim.asp) Removes leading and trailing spaces/characters from a string
+        ```sql
+        SELECT trimmed_string, LENGTH(trimmed_string) FROM (
+            SELECT TRIM("   SQL Tutorial    ") AS trimmed_string
+        ) AS temp_table;
+        -- O/P => 'SQL Tutorial', 12
+
+        SELECT trimmed_string, LENGTH(trimmed_string) FROM (
+            SELECT TRIM(LEADING ' ' FROM "   SQL Tutorial    ") AS trimmed_string
+        ) AS temp_table;
+        -- O/P => 'SQL Tutorial    ', 16
+
+        SELECT trimmed_string, LENGTH(trimmed_string) FROM (
+            SELECT TRIM(TRAILING ' ' FROM "   SQL Tutorial    ") AS trimmed_string
+        ) AS temp_table;
+        -- O/P => '   SQL Tutorial', 15
+
+        SELECT trimmed_string, LENGTH(trimmed_string) FROM (
+            SELECT TRIM(BOTH '*' FROM "***SQL Tutorial****") AS trimmed_string
+        ) AS temp_table;
+        -- O/P => 'SQL Tutorial', 12
+        ```
+
+- Date Functions
+    - [EXTRACT](https://www.w3schools.com/mysql/func_mysql_extract.asp) Extracts a part from a given date 
+        ```sql
+        SELECT
+            EXTRACT(MONTH FROM last_checkin),
+            EXTRACT(DAY FROM last_checkin),
+            EXTRACT(MINUTE FROM last_checkin),
+            last_checkin
+        FROM memberships;
+        -- O/P => 10, 1, 17, 2025-10-01 05:17:16
+        ```
+
+    - [WEEKDAY](https://www.w3schools.com/mysql/func_mysql_weekday.asp) Returns the weekday number for a given date
+        - **Note:** 0 = Monday, 1 = Tuesday, 2 = Wednesday, 3 = Thursday, 4 = Friday, 5 = Saturday, 6 = Sunday.
+        ```SQL
+        SELECT WEEKDAY("2025-07-24");
+        -- O/P => 3
+        ```
+    - [CONVERT](https://www.w3schools.com/mysql/func_mysql_convert.asp) converts a value into the specified datatype or character set
+        ```sql
+        SELECT CONVERT("2025-07-24 08:10:15", DATE);
+        -- O/P => 2025-07-24
+
+        SELECT CONVERT("2025-07-24 08:10:15", TIME);
+        -- O/P => 08:10:15
+
+        SELECT CONVERT("2025-07-24", DATETIME);
+        -- O/P => 2025-07-24 00:00:00
+        ```
+    
+    - [TIMESTAMPDIFF](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_timestampdiff) Return the difference of two datetime expressions, using the units specified
+        ```sql
+        SELECT TIMESTAMPDIFF(MINUTE, last_checkin, last_checkout)
+        FROM memberships;
+        -- O/P => return difference in minutes
+        ```
+    - [DATEDIFF](https://www.w3schools.com/mysql/func_mysql_datediff.asp) Returns the number of days between two date values
+        ```sql
+        SELECT DATEDIFF("2025-06-25", "2025-06-15");
+        -- O/P => 10
+
+        SELECT DATEDIFF(NOW(), "2025-06-15");
+        -- O/P => it will give no. of days between given date and current date
+        ```
+    
+    - [DATE_ADD](https://www.w3schools.com/mysql/func_mysql_date_add.asp) Adds a time/date interval to a date and then returns the date
+        ```sql
+        SELECT DATE_ADD("2025-06-15", INTERVAL 10 DAY);
+        -- O/P => 2025-06-25
+
+        SELECT DATE_ADD("2025-06-15", INTERVAL 10 YEAR);
+        -- O/P => 2035-06-15
+
+        SELECT DATE_ADD("2025-06-15", INTERVAL 10 MONTH);
+        -- O/P => 2026-04-15
+        ```
+
+### [LIKE](https://www.w3schools.com/mysql/mysql_like.asp)
+- The `LIKE` operator is used in a WHERE clause to search for a specified pattern in a column.
+    | LIKE Operator | Description |
+    |---------------|-------------|
+    | 'a%' | Finds any values that start with "a" |
+    | '%a' | Finds any values that end with "a" |
+    | '%or%' | Finds any values that have "or" in any position |
+    | '_r%' | Finds any values that have "r" in the second position |
+    | 'a_%' | Finds any values that start with "a" and are at least 2 characters in length |
+    | 'a__%' | Finds any values that start with "a" and are at least 3 characters in length |
+    | 'a%o' | 	Finds any values that start with "a" and ends with "o" |
+
+    ```sql
+    SELECT * FROM memberships
+    WHERE first_name LIKE 'a%';
+    ```
+
+### [EXISTS](https://www.w3schools.com/mysql/mysql_exists.asp)
+- The `EXISTS` operator is used to test for the existence of any record in a subquery.
+    ```sql
+    SELECT supplier_name
+    FROM suppliers
+    WHERE EXISTS (SELECT product_name FROM products WHERE products.supplier_id = suppliers.supplier_id AND price < 20);
+    ```
+
+### [IN](https://www.w3schools.com/mysql/mysql_in.asp) / NOT IN
+- The `IN` operator allows you to specify multiple values in a WHERE clause.
+- The `IN` operator is a shorthand for multiple `OR` conditions.
+    ```sql
+    SELECT * FROM customers
+    WHERE country IN ('Germany', 'France', 'UK');
+
+    SELECT * FROM customers
+    WHERE country NOT IN ('Germany', 'France', 'UK');
+
+    SELECT * FROM customers
+    WHERE country IN (SELECT country FROM suppliers);
+    ```
+
+### [MySQL CASE Statement](https://www.w3schools.com/mysql/mysql_case.asp)
+```sql
+SELECT order_id, quantity,
+CASE
+    WHEN quantity > 30 THEN 'The quantity is greater than 30'
+    WHEN quantity = 30 THEN 'The quantity is 30'
+    ELSE 'The quantity is under 30'
+END AS quantity_text
+FROM order_details;
+```
