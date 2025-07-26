@@ -1097,3 +1097,32 @@ CASE
 END AS quantity_text
 FROM order_details;
 ```
+
+### [MySQL Transaction](https://www.geeksforgeeks.org/mysql/mysql-transaction/)
+- A database transaction is a series of operations executed as a single, all-or-nothing unit of work. To be more precise, all the operations inside a transaction must be completed; otherwise, it will roll back to the previous state before the operations took place.
+    ```sql
+    START TRANSACTION;
+
+    SAVEPOINT savepoint1;
+
+    UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+
+    SAVEPOINT savepoint2;
+
+    UPDATE accounts SET balance = balance + 100 WHERE account_id = 2;
+
+    -- If an error occurs, roll back to a specific savepoint
+    ROLLBACK TO SAVEPOINT savepoint1;
+
+    -- OR roll back to the state before transaction
+    ROLLBACK;
+
+    -- Finally, commit the transaction
+    COMMIT;
+    ```
+- `START TRANSACTION` begins a new transaction.
+- `SAVEPOINT identifier` establishes a named checkpoint inside the current transaction. If a savepoint with the same name already exists, it's replaced.
+- `ROLLBACK TO SAVEPOINT identifier` undoes all modifications made after that savepoint **without terminating the transaction**, and removes any savepoints created after it.
+- `ROLLBACK` without specifying a savepoint aborts the entire transaction and resets to before the START TRANSACTION. All savepoints are cleared.
+- `COMMIT` makes changes permanent, ends the current transaction, and clears all savepoints.
+- **Note:** without rollback, if we start another transaction then the changes will be applied to the database permanently.
