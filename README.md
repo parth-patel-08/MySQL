@@ -1126,3 +1126,65 @@ FROM order_details;
 - `ROLLBACK` without specifying a savepoint aborts the entire transaction and resets to before the START TRANSACTION. All savepoints are cleared.
 - `COMMIT` makes changes permanent, ends the current transaction, and clears all savepoints.
 - **Note:** without rollback, if we start another transaction then the changes will be applied to the database permanently.
+
+### [MySQL Indexes](https://www.geeksforgeeks.org/mysql/mysql-indexes/)
+- MySQL indexes are designed tools to increase the speed and efficiency of data retrieval operations within a database.
+- If we create an index on a column, the database builds a separate index structure that stores the column's values in sorted order to enable faster searches. When you look for a record, the database first searches the index. Since the index is sorted, this lookup is much faster than scanning the entire table. Once the matching key is found in the index structure, it follows the stored pointer to retrieve the corresponding record from the main data table.
+- **Note:** Avoid using too many indexes. Use them only for read-intensive data (data that is retrieved frequently but not often updated). This is because if updates occur on indexed columns, the index table must also be updated. This makes update operations slower and more resource-intensive.
+- `EXPLAIN` | `EXPLAIN ANALYZE`: explain with select query will display which indexes are being used and what is the cost of the query.
+    ```sql
+    EXPLAIN ANALYZE
+    SELECT * FROM users WHERE salary > 12000;
+    -- O/P => cost=0.85 rows=2 actual_time=0.069..0.075 loops=1
+    ```
+
+- Single Column Index:
+    ```sql
+    CREATE INDEX salary_idx ON users (salary);
+
+    -- Index at the time of table creation
+    CREATE TABLE users (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(200),
+        salary INT,
+        INDEX salary_idx (salary)
+    );
+    ```
+
+- Unique Index:
+    ```sql
+    CREATE UNIQUE INDEX salary_idx ON users (salary);
+
+    -- Unique index at the time of table creation
+    CREATE TABLE users (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(200),
+        salary INT UNIQUE, -- this will create unique index by default
+    );
+    ```
+
+- Multi-Column Index:
+    ```sql
+    CREATE INDEX address_idx ON addresses (street, city, user_id);
+    /*
+        this index will be used if below are in where condition of query
+        1. street
+        2. combination of street & city
+        3. combination of street, city & user_id
+    */
+    ```
+
+- Full-Text Index:
+    ```sql
+    CREATE FULLTEXT INDEX user_name_idx ON users (name);
+    ```
+
+- Show Indexes on table:
+    ```sql
+    SHOW INDEX FROM users;
+    ```
+
+- Deleting Index from table:
+    ```sql
+    DROP INDEX salary_idx ON users;
+    ```
